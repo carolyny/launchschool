@@ -1,8 +1,15 @@
 require 'pry'
+PLAYER_MARKER = "X".freeze
+COMPUTER_MARKER = "O".freeze
 
 WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] +
                 [[1, 4, 7], [2, 5, 8], [3, 6, 9]] +
                 [[1, 5, 9], [3, 5, 7]]
+
+WINNING_SCORE = 5
+
+player_score = 0
+computer_score = 0
 
 def clear_screen
   system('clear') || system('cls')
@@ -27,6 +34,7 @@ def display_board(board)
   puts '---+---+---'
   puts " #{board[7]} | #{board[8]} | #{board[9]}"
   puts
+  puts
 end
 
 def joiner(array_of_empty_squares, delimiter = ', ', word = 'or')
@@ -40,6 +48,12 @@ def joiner(array_of_empty_squares, delimiter = ', ', word = 'or')
   end
 end
 
+def find_at_risk_square(line, board, marker)
+  if board.values_at(*line).count(marker) == 2
+    board.select { |k, v| line.include?(k) && v == ' ' }.keys.first
+  end
+end
+
 def empty_square?(board)
   board.select { |_, v| v == ' ' }.keys
 end
@@ -50,7 +64,7 @@ def user_turn(board)
     prompt "choose a square: #{joiner(empty_square?(board))}"
     user_choice = gets.chomp.to_i
     if empty_square?(board).include?(user_choice)
-      board[user_choice] = 'X'
+      board[user_choice] = PLAYER_MARKER
       break
     else
       prompt 'not a valid option, try again'
@@ -59,8 +73,23 @@ def user_turn(board)
 end
 
 def computer_turn(board)
-  computer_choice = empty_square?(board).sample
-  board[computer_choice] = 'O'
+  square = nil
+  WINNING_LINES.each do |line|
+    square = find_at_risk_square(line, board, COMPUTER_MARKER)
+    break if square
+  end
+
+  if !square
+    WINNING_LINES.each do |line|
+      square = find_at_risk_square(line, board, PLAYER_MARKER)
+      break if square
+    end
+  end
+
+  if !square
+    square = empty_square?(board).sample
+  end
+  board[square] = COMPUTER_MARKER
 end
 
 def someone_won(board)
@@ -87,21 +116,31 @@ loop do
     display_board(board)
     break if board.values.count(' ').zero? || someone_won(board)
   end
-
   clear_screen
-
   display_board(board)
-  puts
   if someone_won(board)
     puts "The #{detect_winner(board)} won"
+    if detect_winner(board) == "player"
+      player_score += 1
+    elsif detect_winner(board) == "computer"
+      computer_score += 1
+    end
   else
-    puts "It's a draw"
+    player_score += 1
+    computer_score += 1
+    prompt("It's a draw")
   end
-
-  prompt('play again?')
-  if gets.chomp.start_with?('y')
-  else
-    prompt('thanks for playing - good bye')
+  prompt("Player score:#{player_score}, computer score:#{computer_score}")
+  if player_score == 5 || computer_score == 5
+    player_score == 5 ? overall_winner = "player" : overall_winner = "computer"
+    prompt "Overall winner is #{overall_winner}"
     break
+  else
+    prompt('play again?')
+    if gets.chomp.start_with?('y')
+    else
+      prompt('Thank you for playing - good bye')
+      break
+    end
   end
 end
