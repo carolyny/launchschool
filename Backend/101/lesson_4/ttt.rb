@@ -1,4 +1,3 @@
-require 'pry'
 PLAYER_MARKER = "X".freeze
 COMPUTER_MARKER = "O".freeze
 
@@ -50,12 +49,12 @@ end
 
 def find_at_risk_square(line, board, marker)
   if board.values_at(*line).count(marker) == 2
-    board.select { |k, v| line.include?(k) && v == ' ' }.keys.first
+    board.select { |square, value| line.include?(square) && value == ' ' }.keys.first
   end
 end
 
 def empty_square?(board)
-  board.select { |_, v| v == ' ' }.keys
+  board.select { |_, value| value == ' ' }.keys
 end
 
 def user_turn(board)
@@ -80,9 +79,13 @@ def computer_turn(board)
   end
 
   if !square
-    WINNING_LINES.each do |line|
-      square = find_at_risk_square(line, board, PLAYER_MARKER)
-      break if square
+    if board[5] == " "
+      square = 5
+    else
+      WINNING_LINES.each do |line|
+        square = find_at_risk_square(line, board, PLAYER_MARKER)
+        break if square
+      end
     end
   end
 
@@ -98,9 +101,9 @@ end
 
 def detect_winner(board)
   WINNING_LINES.each do |line|
-    if board.values_at(line[0], line[1], line[2]).count('X') == 3
+    if board.values_at(*line).count('X') == 3
       return 'player'
-    elsif board.values_at(line[0], line[1], line[2]).count('O') == 3
+    elsif board.values_at(*line).count('O') == 3
       return 'computer'
     end
   end
@@ -110,14 +113,17 @@ end
 loop do
   board = initialise_board
   display_board(board)
+
   loop do
     user_turn(board)
     computer_turn(board)
     display_board(board)
     break if board.values.count(' ').zero? || someone_won(board)
   end
+
   clear_screen
   display_board(board)
+
   if someone_won(board)
     puts "The #{detect_winner(board)} won"
     if detect_winner(board) == "player"
@@ -126,21 +132,31 @@ loop do
       computer_score += 1
     end
   else
-    player_score += 1
-    computer_score += 1
     prompt("It's a draw")
   end
+
   prompt("Player score:#{player_score}, computer score:#{computer_score}")
+
   if player_score == 5 || computer_score == 5
     player_score == 5 ? overall_winner = "player" : overall_winner = "computer"
     prompt "Overall winner is #{overall_winner}"
     break
   else
-    prompt('play again?')
-    if gets.chomp.start_with?('y')
-    else
-      prompt('Thank you for playing - good bye')
+    answer = ""
+    loop do
+      prompt('play again (y or n?')
+      answer = gets.chomp.downcase
+      if answer == "y" || answer == "n"
+        break
+      else
+        prompt "not a valid option"
+      end
+    end
+
+    if answer == "n"
+      prompt("thank you for playing - good bye")
       break
     end
+
   end
 end
